@@ -1,0 +1,69 @@
+# Node.js
+node_modules/
+npm-debug.log
+yarn-debug.log
+yarn-error.log
+
+# Python
+*.pyc
+*.pyo
+*.pyd
+__pycache__/
+env/
+venv/
+*.env
+
+# Java
+*.class
+*.jar
+*.war
+*.ear
+*.class
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+ehthumbs.db
+
+# IDEs and Editors
+.vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Build files
+dist/
+build/
+out/
+
+# Dependency directories
+bower_components/
+jspm_packages/
+
+# Coverage directories
+coverage/
+
+# Miscellaneous
+*.bak
+*.swp
+*.swo
+*~
+*.tmp
+*.temp
+
+# Docker
+*.dockerfile
+docker-compose.override.yml
+
+# JetBrains IDEs
+.idea/
+*.iml
+
+# Additional custom files you don't want to track (add as needed)
