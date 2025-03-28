@@ -1,0 +1,521 @@
+openapi: 3.0.0
+info:
+  title: Event Locator API
+  version: 1.0.0
+  description: An API for our toy city in Kigali, Rwanda, to manage citizens and events, with location-based notifications delivered by the town crier!
+servers:
+  - url: http://localhost:3000
+    description: Local development server in Kigali
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+paths:
+  /auth/register:
+    post:
+      summary: Register New Citizen
+      description: Welcomes a new citizen to the toy city in Kigali with their email, password, city location, and event tastes.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  example: bienaimeemariereine@gmail.com
+                  description: Citizen’s email address
+                password:
+                  type: string
+                  example: Reine123!
+                  description: Citizen’s secret password
+                location:
+                  type: string
+                  example: "Kigali, Rwanda"
+                  description: City or neighborhood (converted to coordinates by the town scribe)
+                preferences:
+                  type: array
+                  items:
+                    type: string
+                  example: ["music", "dance"]
+                  description: Types of events the citizen enjoys
+              required:
+                - email
+                - password
+                - location
+                - preferences
+      responses:
+        "201":
+          description: Citizen welcomed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    example: 1
+                  email:
+                    type: string
+                    example: bienaimeemariereine@gmail.com
+        "400":
+          description: Bad request (e.g., invalid location or missing fields)
+
+  /auth/login:
+    post:
+      summary: Login Citizen
+      description: Grants a citizen a magical key (token) to access toy city features in Kigali.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  example: bienaimeemariereine@gmail.com
+                  description: Citizen’s email address
+                password:
+                  type: string
+                  example: Reine123!
+                  description: Citizen’s secret password
+              required:
+                - email
+                - password
+      responses:
+        "200":
+          description: Key granted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                    example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+                    description: Magical key for secure actions
+        "401":
+          description: Unauthorized (wrong email or password)
+
+  /events:
+    get:
+      summary: List All Events
+      description: Shows all events posted on Kigali’s toy city bulletin board.
+      responses:
+        "200":
+          description: Bulletin board events retrieved
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                      example: 1
+                    title:
+                      type: string
+                      example: Umuganda Music Night
+                    description:
+                      type: string
+                      example: Community music event
+                    location:
+                      type: object
+                      properties:
+                        lat:
+                          type: number
+                          example: -1.9482
+                        lng:
+                          type: number
+                          example: 30.0928
+                      description: Coordinates set by the town scribe
+                    date_time:
+                      type: string
+                      example: "2025-03-27T18:00:00.000Z"
+                      description: Event time in scribe’s format
+                    preferences:
+                      type: array
+                      items:
+                        type: string
+                      example: ["music"]
+                      description: Event categories
+
+    post:
+      summary: Post New Event
+      description: Adds a new event to Kigali’s toy city bulletin board (needs a magical key). The town crier will notify nearby citizens with matching tastes 24 hours before or immediately if within 24 hours.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                  example: Umuganda Music Night
+                  description: Event name
+                description:
+                  type: string
+                  example: Community music event
+                  description: Event details
+                location:
+                  type: string
+                  example: "Kimihurura, Kigali, Rwanda"
+                  description: Place name (converted to coordinates by the town scribe)
+                date_time:
+                  type: string
+                  example: "2025-03-27 18:00"
+                  description: Event time (e.g., "YYYY-MM-DD HH:MM")
+                preferences:
+                  type: array
+                  items:
+                    type: string
+                  example: ["music"]
+                  description: Event categories
+              required:
+                - title
+                - location
+                - date_time
+                - preferences
+      responses:
+        "201":
+          description: Event posted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    example: 1
+                  title:
+                    type: string
+                    example: Umuganda Music Night
+        "400":
+          description: Bad request (e.g., invalid place or time)
+        "401":
+          description: Unauthorized (no magical key)
+        "500":
+          description: Server error (e.g., notification system failure)
+
+  /events/search:
+    get:
+      summary: Search Events
+      description: Finds events near a spot or matching tastes in Kigali’s toy city.
+      parameters:
+        - in: query
+          name: preferences
+          schema:
+            type: string
+            example: music
+          description: Event category to filter (comma-separated for multiple)
+        - in: query
+          name: lat
+          schema:
+            type: number
+            example: -1.9441
+          description: Latitude for nearby events
+        - in: query
+          name: lng
+          schema:
+            type: number
+            example: 30.0619
+          description: Longitude for nearby events
+        - in: query
+          name: radius
+          schema:
+            type: number
+            example: 10
+          description: Distance in kilometers to search
+      responses:
+        "200":
+          description: Matching events found
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                      example: 1
+                    title:
+                      type: string
+                      example: Umuganda Music Night
+                    location:
+                      type: object
+                      properties:
+                        lat:
+                          type: number
+                          example: -1.9482
+                        lng:
+                          type: number
+                          example: 30.0928
+                    date_time:
+                      type: string
+                      example: "2025-03-27T18:00:00.000Z"
+
+  /events/{id}:
+    get:
+      summary: Get Event Details
+      description: Shows one event’s full notice from Kigali’s bulletin board.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            example: 1
+          description: Event’s unique number
+      responses:
+        "200":
+          description: Event notice retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    example: 1
+                  title:
+                    type: string
+                    example: Umuganda Music Night
+                  description:
+                    type: string
+                    example: Community music event
+                  location:
+                    type: object
+                    properties:
+                      lat:
+                        type: number
+                        example: -1.9482
+                      lng:
+                        type: number
+                        example: 30.0928
+                  date_time:
+                    type: string
+                    example: "2025-03-27T18:00:00.000Z"
+                  preferences:
+                    type: array
+                    items:
+                      type: string
+                    example: ["music"]
+        "404":
+          description: Event not found
+
+    put:
+      summary: Update Event
+      description: Changes an event’s notice on Kigali’s bulletin board (needs a magical key).
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            example: 1
+          description: Event’s unique number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                  example: Umuganda Music Night Updated
+                  description: New event name
+                description:
+                  type: string
+                  example: Updated community music event
+                  description: New details
+                location:
+                  type: string
+                  example: "Kacyiru, Kigali, Rwanda"
+                  description: New place (optional, converted to coordinates)
+                date_time:
+                  type: string
+                  example: "2025-03-28 18:00"
+                  description: New time (optional, e.g., "YYYY-MM-DD HH:MM")
+                preferences:
+                  type: array
+                  items:
+                    type: string
+                  example: ["music", "dance"]
+                  description: New categories
+      responses:
+        "200":
+          description: Event notice updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    example: 1
+                  title:
+                    type: string
+                    example: Umuganda Music Night Updated
+        "401":
+          description: Unauthorized (no key or not the poster)
+        "404":
+          description: Event not found
+
+    delete:
+      summary: Delete Event
+      description: Removes an event’s notice from Kigali’s bulletin board (needs a magical key).
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            example: 1
+          description: Event’s unique number
+      responses:
+        "204":
+          description: Event notice removed (no content)
+        "401":
+          description: Unauthorized (no key or not the poster)
+        "404":
+          description: Event not found
+
+  /events/{id}/rate:
+    post:
+      summary: Rate Event
+      description: Lets a citizen rate an event on Kigali’s bulletin board (needs a magical key).
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            example: 1
+          description: Event’s unique number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                rating:
+                  type: integer
+                  example: 4
+                  description: Stars given (1 to 5)
+              required:
+                - rating
+      responses:
+        "201":
+          description: Rating added successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  eventId:
+                    type: integer
+                    example: 1
+                  rating:
+                    type: integer
+                    example: 4
+        "400":
+          description: Bad request (e.g., invalid rating)
+        "401":
+          description: Unauthorized (no key)
+        "404":
+          description: Event not found
+
+  /events/{id}/favorite:
+    post:
+      summary: Favorite Event
+      description: Pins an event to a citizen’s favorite list in Kigali (needs a magical key).
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            example: 1
+          description: Event’s unique number
+      responses:
+        "201":
+          description: Event pinned successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  eventId:
+                    type: integer
+                    example: 1
+                  userId:
+                    type: integer
+                    example: 1
+        "401":
+          description: Unauthorized (no key)
+        "404":
+          description: Event not found
+
+  /events/favorites:
+    get:
+      summary: List Favorite Events
+      description: Shows all events a citizen has pinned in Kigali (needs a magical key).
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Favorite events retrieved
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                      example: 1
+                    title:
+                      type: string
+                      example: Umuganda Music Night
+                    description:
+                      type: string
+                    location:
+                      type: object
+                      properties:
+                        lat:
+                          type: number
+                          example: -1.9482
+                        lng:
+                          type: number
+                          example: 30.0928
+                    date_time:
+                      type: string
+                      example: "2025-03-27T18:00:00.000Z"
+                    preferences:
+                      type: array
+                      items:
+                        type: string
+                      example: ["music"]
+        "401":
+          description: Unauthorized (no key)

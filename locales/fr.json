@@ -1,0 +1,11 @@
+{
+  "welcome": "Bienvenue au Localisateur d'Événements",
+  "event_created": "Événement créé avec succès",
+  "event_updated": "Événement mis à jour avec succès",
+  "event_deleted": "Événement supprimé avec succès",
+  "not_found": "Événement non trouvé",
+  "unauthorized": "Non autorisé",
+  "rated": "Événement noté avec succès",
+  "favorited": "Événement ajouté aux favoris",
+  "invalid_credentials": "Email ou mot de passe invalide"
+}

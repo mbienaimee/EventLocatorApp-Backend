@@ -1,0 +1,11 @@
+{
+  "welcome": "Welcome to the Event Locator",
+  "event_created": "Event created successfully",
+  "event_updated": "Event updated successfully",
+  "event_deleted": "Event deleted successfully",
+  "not_found": "Event not found",
+  "unauthorized": "Unauthorized",
+  "rated": "Event rated successfully",
+  "favorited": "Event added to favorites",
+  "invalid_credentials": "Invalid email or password"
+}
