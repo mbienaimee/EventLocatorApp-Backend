@@ -187,7 +187,7 @@ npm test
 ```
 
 ```bash
-### the link to the video
+
 
 [video link](https://www.youtube.com/watch?v=4K1mCAFlcgU)
 ```
