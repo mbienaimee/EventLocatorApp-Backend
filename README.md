@@ -186,8 +186,6 @@ Create a `tests/` folder and add test files (e.g., `auth.test.js`). Run tests:
 npm test
 ```
 
-```bash
-
+### link to the video
 
 [video link](https://www.youtube.com/watch?v=4K1mCAFlcgU)
-```
