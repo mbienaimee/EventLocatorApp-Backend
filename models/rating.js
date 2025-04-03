@@ -1,4 +1,3 @@
-// models/rating.js
 module.exports = (sequelize, DataTypes) => {
   const Rating = sequelize.define("Rating", {
     rating: {

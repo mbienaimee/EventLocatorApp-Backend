@@ -2,7 +2,9 @@ openapi: 3.0.0
 info:
   title: Event Locator API
   version: 1.0.0
-  description: An API for our toy city in Kigali, Rwanda, to manage citizens and events, with location-based notifications delivered by the town crier!
+  description: |
+    An API for our toy city in Kigali, Rwanda, to manage citizens and events, with location-based notifications delivered by the town crier!
+    Supports multiple languages (en, es, fr) via the `Accept-Language` header or `lang` query parameter. Example: `Accept-Language: fr` or `?lang=fr` for French responses.
 servers:
   - url: http://localhost:3000
     description: Local development server in Kigali
@@ -12,12 +14,82 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
-
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        email:
+          type: string
+          example: bienaimeemariereine@gmail.com
+    Event:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        title:
+          type: string
+          example: Music Night
+        description:
+          type: string
+          example: A night of music
+        location:
+          type: object
+          properties:
+            type:
+              type: string
+              example: Point
+            coordinates:
+              type: array
+              items:
+                type: number
+              example: [30.0928, -1.9482] # [lng, lat]
+        date_time:
+          type: string
+          format: date-time
+          example: 2025-04-10T18:00:00Z
+        preferences:
+          type: array
+          items:
+            type: string
+          example: ["music"]
+        creator_id:
+          type: integer
+          example: 1
+    Rating:
+      type: object
+      properties:
+        eventId:
+          type: integer
+          example: 1
+        rating:
+          type: integer
+          example: 4
+    Favorite:
+      type: object
+      properties:
+        eventId:
+          type: integer
+          example: 1
+        userId:
+          type: integer
+          example: 1
 paths:
   /auth/register:
     post:
       summary: Register New Citizen
-      description: Welcomes a new citizen to the toy city in Kigali with their email, password, city location, and event tastes.
+      description: Registers a new citizen in Kigali’s toy city with email, password, location, and event preferences. Passwords are hashed for security.
+      parameters:
+        - in: query
+          name: lang
+          schema:
+            type: string
+            enum: ["en", "es", "fr"]
+            default: "en"
+          description: Optional language override (e.g., 'fr' for French). Overrides Accept-Language header if provided.
       requestBody:
         required: true
         content:
@@ -32,11 +104,11 @@ paths:
                 password:
                   type: string
                   example: Reine123!
-                  description: Citizen’s secret password
+                  description: Citizen’s secret password (will be hashed)
                 location:
                   type: string
                   example: "Kigali, Rwanda"
-                  description: City or neighborhood (converted to coordinates by the town scribe)
+                  description: City or neighborhood (converted to coordinates)
                 preferences:
                   type: array
                   items:
@@ -50,12 +122,20 @@ paths:
                 - preferences
       responses:
         "201":
-          description: Citizen welcomed successfully
+          description: Citizen registered successfully
           content:
             application/json:
               schema:
                 type: object
                 properties:
+                  message:
+                    type: string
+                    description: Translated success message
+                    example: "Citizen welcomed successfully" # en
+                    examples:
+                      en: "Citizen welcomed successfully"
+                      es: "Ciudadano recibido con éxito"
+                      fr: "Citoyen accueilli avec succès"
                   id:
                     type: integer
                     example: 1
@@ -64,11 +144,32 @@ paths:
                     example: bienaimeemariereine@gmail.com
         "400":
           description: Bad request (e.g., invalid location or missing fields)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: Translated error message
+                    example: "Bad request" # en
+                    examples:
+                      en: "Bad request"
+                      es: "Solicitud incorrecta"
+                      fr: "Mauvaise requête"
 
   /auth/login:
     post:
       summary: Login Citizen
-      description: Grants a citizen a magical key (token) to access toy city features in Kigali.
+      description: Logs in a citizen and grants a JWT token for accessing toy city features.
+      parameters:
+        - in: query
+          name: lang
+          schema:
+            type: string
+            enum: ["en", "es", "fr"]
+            default: "en"
+          description: Optional language override (e.g., 'fr' for French). Overrides Accept-Language header if provided.
       requestBody:
         required: true
         content:
@@ -89,68 +190,69 @@ paths:
                 - password
       responses:
         "200":
-          description: Key granted successfully
+          description: Login successful, token granted
           content:
             application/json:
               schema:
                 type: object
                 properties:
+                  message:
+                    type: string
+                    description: Translated success message
+                    example: "Key granted successfully" # en
+                    examples:
+                      en: "Key granted successfully"
+                      es: "Llave otorgada con éxito"
+                      fr: "Clé accordée avec succès"
                   token:
                     type: string
                     example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-                    description: Magical key for secure actions
+                    description: JWT token for authentication
         "401":
           description: Unauthorized (wrong email or password)
-
-  /events:
-    get:
-      summary: List All Events
-      description: Shows all events posted on Kigali’s toy city bulletin board.
-      responses:
-        "200":
-          description: Bulletin board events retrieved
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  type: object
-                  properties:
-                    id:
-                      type: integer
-                      example: 1
-                    title:
-                      type: string
-                      example: Umuganda Music Night
-                    description:
-                      type: string
-                      example: Community music event
-                    location:
-                      type: object
-                      properties:
-                        lat:
-                          type: number
-                          example: -1.9482
-                        lng:
-                          type: number
-                          example: 30.0928
-                      description: Coordinates set by the town scribe
-                    date_time:
-                      type: string
-                      example: "2025-03-27T18:00:00.000Z"
-                      description: Event time in scribe’s format
-                    preferences:
-                      type: array
-                      items:
-                        type: string
-                      example: ["music"]
-                      description: Event categories
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: Translated error message
+                    example: "Unauthorized" # en
+                    examples:
+                      en: "Unauthorized"
+                      es: "No autorizado"
+                      fr: "Non autorisé"
+        "400":
+          description: Bad request (e.g., invalid input)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: Translated error message
+                    example: "Bad request" # en
+                    examples:
+                      en: "Bad request"
+                      es: "Solicitud incorrecta"
+                      fr: "Mauvaise requête"
 
+  /events:
     post:
-      summary: Post New Event
-      description: Adds a new event to Kigali’s toy city bulletin board (needs a magical key). The town crier will notify nearby citizens with matching tastes 24 hours before or immediately if within 24 hours.
+      summary: Create New Event
+      description: Creates a new event in Kigali’s toy city. Requires authentication.
       security:
         - bearerAuth: []
+      parameters:
+        - in: query
+          name: lang
+          schema:
+            type: string
+            enum: ["en", "es", "fr"]
+            default: "en"
+          description: Optional language override (e.g., 'fr' for French).
       requestBody:
         required: true
         content:
@@ -160,114 +262,222 @@ paths:
               properties:
                 title:
                   type: string
-                  example: Umuganda Music Night
-                  description: Event name
+                  example: Music Night
+                  description: Title of the event
                 description:
                   type: string
-                  example: Community music event
-                  description: Event details
+                  example: A night of music
+                  description: Description of the event
                 location:
                   type: string
-                  example: "Kimihurura, Kigali, Rwanda"
-                  description: Place name (converted to coordinates by the town scribe)
+                  example: "Kigali, Rwanda"
+                  description: Event location (converted to coordinates)
                 date_time:
                   type: string
-                  example: "2025-03-27 18:00"
-                  description: Event time (e.g., "YYYY-MM-DD HH:MM")
+                  format: date-time
+                  example: 2025-04-10T18:00:00Z
+                  description: Date and time of the event
                 preferences:
                   type: array
                   items:
                     type: string
                   example: ["music"]
-                  description: Event categories
+                  description: Event preferences or categories
               required:
                 - title
+                - description
                 - location
                 - date_time
                 - preferences
       responses:
         "201":
-          description: Event posted successfully
+          description: Event created successfully
           content:
             application/json:
               schema:
                 type: object
                 properties:
+                  message:
+                    type: string
+                    example: "Event created successfully" # en
+                    examples:
+                      en: "Event created successfully"
+                      es: "Evento creado con éxito"
+                      fr: "Événement créé avec succès"
                   id:
                     type: integer
                     example: 1
                   title:
                     type: string
-                    example: Umuganda Music Night
-        "400":
-          description: Bad request (e.g., invalid place or time)
+                    example: Music Night
         "401":
-          description: Unauthorized (no magical key)
+          description: Unauthorized (no valid token)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Unauthorized" # en
+                    examples:
+                      en: "Unauthorized"
+                      es: "No autorizado"
+                      fr: "Non autorisé"
         "500":
-          description: Server error (e.g., notification system failure)
+          description: Server error (e.g., geocoding failure)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Internal server error" # en
+                    examples:
+                      en: "Internal server error"
+                      es: "Error interno del servidor"
+                      fr: "Erreur interne du serveur"
+
+    get:
+      summary: Get All Events
+      description: Retrieves all events in Kigali’s toy city.
+      parameters:
+        - in: query
+          name: lang
+          schema:
+            type: string
+            enum: ["en", "es", "fr"]
+            default: "en"
+          description: Optional language override (e.g., 'fr' for French).
+      responses:
+        "200":
+          description: Events retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Events retrieved successfully" # en
+                    examples:
+                      en: "Events retrieved successfully"
+                      es: "Eventos recuperados con éxito"
+                      fr: "Événements récupérés avec succès"
+                  events:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Event"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Internal server error" # en
+                    examples:
+                      en: "Internal server error"
+                      es: "Error interno del servidor"
+                      fr: "Erreur interne du serveur"
 
   /events/search:
     get:
       summary: Search Events
-      description: Finds events near a spot or matching tastes in Kigali’s toy city.
+      description: Searches events by preferences and proximity (optional).
       parameters:
+        - in: query
+          name: lang
+          schema:
+            type: string
+            enum: ["en", "es", "fr"]
+            default: "en"
+          description: Optional language override (e.g., 'fr' for French).
         - in: query
           name: preferences
           schema:
             type: string
-            example: music
-          description: Event category to filter (comma-separated for multiple)
+            example: music,dance
+            description: Comma-separated list of preferences to filter by
         - in: query
           name: lat
           schema:
             type: number
-            example: -1.9441
-          description: Latitude for nearby events
+            example: -1.9482
+            description: Latitude for proximity search
         - in: query
           name: lng
           schema:
             type: number
-            example: 30.0619
-          description: Longitude for nearby events
+            example: 30.0928
+            description: Longitude for proximity search
         - in: query
           name: radius
           schema:
             type: number
             example: 10
-          description: Distance in kilometers to search
+            description: Radius in kilometers (default 5km)
       responses:
         "200":
-          description: Matching events found
+          description: Events retrieved successfully
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  type: object
-                  properties:
-                    id:
-                      type: integer
-                      example: 1
-                    title:
-                      type: string
-                      example: Umuganda Music Night
-                    location:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Events retrieved successfully" # en
+                    examples:
+                      en: "Events retrieved successfully"
+                      es: "Eventos recuperados con éxito"
+                      fr: "Événements récupérés avec succès"
+                  events:
+                    type: array
+                    items:
                       type: object
                       properties:
-                        lat:
-                          type: number
-                          example: -1.9482
-                        lng:
-                          type: number
-                          example: 30.0928
-                    date_time:
-                      type: string
-                      example: "2025-03-27T18:00:00.000Z"
+                        id:
+                          type: integer
+                          example: 1
+                        title:
+                          type: string
+                          example: Music Night
+                        location:
+                          type: object
+                          properties:
+                            lat:
+                              type: number
+                              example: -1.9482
+                            lng:
+                              type: number
+                              example: 30.0928
+                        date_time:
+                          type: string
+                          format: date-time
+                          example: 2025-04-10T18:00:00Z
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Internal server error" # en
+                    examples:
+                      en: "Internal server error"
+                      es: "Error interno del servidor"
+                      fr: "Erreur interne du serveur"
 
   /events/{id}:
     get:
-      summary: Get Event Details
-      description: Shows one event’s full notice from Kigali’s bulletin board.
+      summary: Get Event by ID
+      description: Retrieves a specific event by its ID.
       parameters:
         - in: path
           name: id
@@ -275,47 +485,63 @@ paths:
           schema:
             type: integer
             example: 1
-          description: Event’s unique number
+          description: Event ID
+        - in: query
+          name: lang
+          schema:
+            type: string
+            enum: ["en", "es", "fr"]
+            default: "en"
+          description: Optional language override (e.g., 'fr' for French).
       responses:
         "200":
-          description: Event notice retrieved
+          description: Event retrieved successfully
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  id:
-                    type: integer
-                    example: 1
-                  title:
+                  message:
                     type: string
-                    example: Umuganda Music Night
-                  description:
-                    type: string
-                    example: Community music event
-                  location:
-                    type: object
-                    properties:
-                      lat:
-                        type: number
-                        example: -1.9482
-                      lng:
-                        type: number
-                        example: 30.0928
-                  date_time:
-                    type: string
-                    example: "2025-03-27T18:00:00.000Z"
-                  preferences:
-                    type: array
-                    items:
-                      type: string
-                    example: ["music"]
+                    example: "Event retrieved successfully" # en
+                    examples:
+                      en: "Event retrieved successfully"
+                      es: "Evento recuperado con éxito"
+                      fr: "Événement récupéré avec succès"
+                  event:
+                    $ref: "#/components/schemas/Event"
         "404":
           description: Event not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Event not found" # en
+                    examples:
+                      en: "Event not found"
+                      es: "Evento no encontrado"
+                      fr: "Événement non trouvé"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Internal server error" # en
+                    examples:
+                      en: "Internal server error"
+                      es: "Error interno del servidor"
+                      fr: "Erreur interne du serveur"
 
     put:
       summary: Update Event
-      description: Changes an event’s notice on Kigali’s bulletin board (needs a magical key).
+      description: Updates an existing event. Only the creator can update it.
       security:
         - bearerAuth: []
       parameters:
@@ -325,7 +551,14 @@ paths:
           schema:
             type: integer
             example: 1
-          description: Event’s unique number
+          description: Event ID
+        - in: query
+          name: lang
+          schema:
+            type: string
+            enum: ["en", "es", "fr"]
+            default: "en"
+          description: Optional language override (e.g., 'fr' for French).
       requestBody:
         required: true
         content:
@@ -335,48 +568,103 @@ paths:
               properties:
                 title:
                   type: string
-                  example: Umuganda Music Night Updated
-                  description: New event name
+                  example: Music Night Updated
                 description:
                   type: string
-                  example: Updated community music event
-                  description: New details
+                  example: Updated music night
                 location:
                   type: string
-                  example: "Kacyiru, Kigali, Rwanda"
-                  description: New place (optional, converted to coordinates)
+                  example: "Kigali, Rwanda"
                 date_time:
                   type: string
-                  example: "2025-03-28 18:00"
-                  description: New time (optional, e.g., "YYYY-MM-DD HH:MM")
+                  format: date-time
+                  example: 2025-04-10T19:00:00Z
                 preferences:
                   type: array
                   items:
                     type: string
                   example: ["music", "dance"]
-                  description: New categories
       responses:
         "200":
-          description: Event notice updated
+          description: Event updated successfully
           content:
             application/json:
               schema:
                 type: object
                 properties:
+                  message:
+                    type: string
+                    example: "Event updated successfully" # en
+                    examples:
+                      en: "Event updated successfully"
+                      es: "Evento actualizado con éxito"
+                      fr: "Événement mis à jour avec succès"
                   id:
                     type: integer
                     example: 1
                   title:
                     type: string
-                    example: Umuganda Music Night Updated
+                    example: Music Night Updated
         "401":
-          description: Unauthorized (no key or not the poster)
+          description: Unauthorized (no valid token or not creator)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Unauthorized" # en
+                    examples:
+                      en: "Unauthorized"
+                      es: "No autorizado"
+                      fr: "Non autorisé"
         "404":
           description: Event not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Event not found" # en
+                    examples:
+                      en: "Event not found"
+                      es: "Evento no encontrado"
+                      fr: "Événement non trouvé"
+        "400":
+          description: Invalid location
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Invalid location" # en
+                    examples:
+                      en: "Invalid location"
+                      es: "Ubicación inválida"
+                      fr: "Emplacement invalide"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Internal server error" # en
+                    examples:
+                      en: "Internal server error"
+                      es: "Error interno del servidor"
+                      fr: "Erreur interne du serveur"
 
     delete:
       summary: Delete Event
-      description: Removes an event’s notice from Kigali’s bulletin board (needs a magical key).
+      description: Deletes an event. Only the creator can delete it.
       security:
         - bearerAuth: []
       parameters:
@@ -386,19 +674,76 @@ paths:
           schema:
             type: integer
             example: 1
-          description: Event’s unique number
+          description: Event ID
+        - in: query
+          name: lang
+          schema:
+            type: string
+            enum: ["en", "es", "fr"]
+            default: "en"
+          description: Optional language override (e.g., 'fr' for French).
       responses:
-        "204":
-          description: Event notice removed (no content)
+        "200":
+          description: Event deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Event deleted successfully" # en
+                    examples:
+                      en: "Event deleted successfully"
+                      es: "Evento eliminado con éxito"
+                      fr: "Événement supprimé avec succès"
         "401":
-          description: Unauthorized (no key or not the poster)
+          description: Unauthorized (no valid token or not creator)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Unauthorized" # en
+                    examples:
+                      en: "Unauthorized"
+                      es: "No autorizado"
+                      fr: "Non autorisé"
         "404":
           description: Event not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Event not found" # en
+                    examples:
+                      en: "Event not found"
+                      es: "Evento no encontrado"
+                      fr: "Événement non trouvé"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Internal server error" # en
+                    examples:
+                      en: "Internal server error"
+                      es: "Error interno del servidor"
+                      fr: "Erreur interne du serveur"
 
   /events/{id}/rate:
     post:
-      summary: Rate Event
-      description: Lets a citizen rate an event on Kigali’s bulletin board (needs a magical key).
+      summary: Rate an Event
+      description: Allows a user to rate an event (1-5 stars).
       security:
         - bearerAuth: []
       parameters:
@@ -408,7 +753,14 @@ paths:
           schema:
             type: integer
             example: 1
-          description: Event’s unique number
+          description: Event ID
+        - in: query
+          name: lang
+          schema:
+            type: string
+            enum: ["en", "es", "fr"]
+            default: "en"
+          description: Optional language override (e.g., 'fr' for French).
       requestBody:
         required: true
         content:
@@ -419,34 +771,91 @@ paths:
                 rating:
                   type: integer
                   example: 4
-                  description: Stars given (1 to 5)
+                  description: Rating between 1 and 5
               required:
                 - rating
       responses:
         "201":
-          description: Rating added successfully
+          description: Event rated successfully
           content:
             application/json:
               schema:
                 type: object
                 properties:
+                  message:
+                    type: string
+                    example: "Event rated successfully" # en
+                    examples:
+                      en: "Event rated successfully"
+                      es: "Evento calificado con éxito"
+                      fr: "Événement noté avec succès"
                   eventId:
                     type: integer
                     example: 1
                   rating:
                     type: integer
                     example: 4
-        "400":
-          description: Bad request (e.g., invalid rating)
         "401":
-          description: Unauthorized (no key)
+          description: Unauthorized (no valid token)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Unauthorized" # en
+                    examples:
+                      en: "Unauthorized"
+                      es: "No autorizado"
+                      fr: "Non autorisé"
         "404":
           description: Event not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Event not found" # en
+                    examples:
+                      en: "Event not found"
+                      es: "Evento no encontrado"
+                      fr: "Événement non trouvé"
+        "400":
+          description: Invalid rating
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Rating must be an integer between 1 and 5" # en
+                    examples:
+                      en: "Rating must be an integer between 1 and 5"
+                      es: "La calificación debe ser un entero entre 1 y 5"
+                      fr: "La note doit être un entier entre 1 et 5"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Internal server error" # en
+                    examples:
+                      en: "Internal server error"
+                      es: "Error interno del servidor"
+                      fr: "Erreur interne du serveur"
 
   /events/{id}/favorite:
     post:
-      summary: Favorite Event
-      description: Pins an event to a citizen’s favorite list in Kigali (needs a magical key).
+      summary: Favorite an Event
+      description: Adds an event to the user’s favorites.
       security:
         - bearerAuth: []
       parameters:
@@ -456,15 +865,49 @@ paths:
           schema:
             type: integer
             example: 1
-          description: Event’s unique number
+          description: Event ID
+        - in: query
+          name: lang
+          schema:
+            type: string
+            enum: ["en", "es", "fr"]
+            default: "en"
+          description: Optional language override (e.g., 'fr' for French).
       responses:
         "201":
-          description: Event pinned successfully
+          description: Event favorited successfully
           content:
             application/json:
               schema:
                 type: object
                 properties:
+                  message:
+                    type: string
+                    example: "Event favorited successfully" # en
+                    examples:
+                      en: "Event favorited successfully"
+                      es: "Evento marcado como favorito con éxito"
+                      fr: "Événement mis en favori avec succès"
+                  eventId:
+                    type: integer
+                    example: 1
+                  userId:
+                    type: integer
+                    example: 1
+        "200":
+          description: Event already favorited
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Event already favorited" # en
+                    examples:
+                      en: "Event already favorited"
+                      es: "El evento ya está en favoritos"
+                      fr: "Événement déjà en favori"
                   eventId:
                     type: integer
                     example: 1
@@ -472,50 +915,134 @@ paths:
                     type: integer
                     example: 1
         "401":
-          description: Unauthorized (no key)
-        "404":
-          description: Event not found
-
-  /events/favorites:
-    get:
-      summary: List Favorite Events
-      description: Shows all events a citizen has pinned in Kigali (needs a magical key).
-      security:
-        - bearerAuth: []
-      responses:
-        "200":
-          description: Favorite events retrieved
+          description: Unauthorized (no valid token)
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  type: object
-                  properties:
-                    id:
-                      type: integer
-                      example: 1
-                    title:
-                      type: string
-                      example: Umuganda Music Night
-                    description:
-                      type: string
-                    location:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Unauthorized" # en
+                    examples:
+                      en: "Unauthorized"
+                      es: "No autorizado"
+                      fr: "Non autorisé"
+        "404":
+          description: Event not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Event not found" # en
+                    examples:
+                      en: "Event not found"
+                      es: "Evento no encontrado"
+                      fr: "Événement non trouvé"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Internal server error" # en
+                    examples:
+                      en: "Internal server error"
+                      es: "Error interno del servidor"
+                      fr: "Erreur interne du serveur"
+
+  /events/favorites:
+    get:
+      summary: Get User’s Favorite Events
+      description: Retrieves all events favorited by the authenticated user.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: lang
+          schema:
+            type: string
+            enum: ["en", "es", "fr"]
+            default: "en"
+          description: Optional language override (e.g., 'fr' for French).
+      responses:
+        "200":
+          description: Favorite events retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Favorite events retrieved successfully" # en
+                    examples:
+                      en: "Favorite events retrieved successfully"
+                      es: "Eventos favoritos recuperados con éxito"
+                      fr: "Événements favoris récupérés avec succès"
+                  favorites:
+                    type: array
+                    items:
                       type: object
                       properties:
-                        lat:
-                          type: number
-                          example: -1.9482
-                        lng:
-                          type: number
-                          example: 30.0928
-                    date_time:
-                      type: string
-                      example: "2025-03-27T18:00:00.000Z"
-                    preferences:
-                      type: array
-                      items:
-                        type: string
-                      example: ["music"]
+                        id:
+                          type: integer
+                          example: 1
+                        title:
+                          type: string
+                          example: Music Night
+                        description:
+                          type: string
+                          example: A night of music
+                        location:
+                          type: object
+                          properties:
+                            lat:
+                              type: number
+                              example: -1.9482
+                            lng:
+                              type: number
+                              example: 30.0928
+                        date_time:
+                          type: string
+                          format: date-time
+                          example: 2025-04-10T18:00:00Z
+                        preferences:
+                          type: array
+                          items:
+                            type: string
+                          example: ["music"]
         "401":
-          description: Unauthorized (no key)
+          description: Unauthorized (no valid token)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Unauthorized" # en
+                    examples:
+                      en: "Unauthorized"
+                      es: "No autorizado"
+                      fr: "Non autorisé"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Internal server error" # en
+                    examples:
+                      en: "Internal server error"
+                      es: "Error interno del servidor"
+                      fr: "Erreur interne du serveur"

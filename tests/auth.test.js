@@ -1,15 +1,27 @@
-// tests/auth.test.js
 const request = require("supertest");
 const app = require("../app");
+const { sequelize } = require("../models");
+
+beforeAll(async () => {
+  await sequelize.sync({ force: true }); // Reset database before tests
+});
+
+afterAll(async () => {
+  await sequelize.close(); // Close database connection after tests
+});
 
 describe("Auth API", () => {
+  beforeEach(async () => {
+    await sequelize.truncate({ cascade: true }); // Clean database between tests
+  });
+
   it("should register a new user", async () => {
     const res = await request(app)
       .post("/auth/register")
       .send({
         email: "test@example.com",
         password: "password123",
-        location: { lat: 40.7128, lng: -74.006 },
+        location: "New York, NY", // Changed to match controller expectation
         preferences: ["music"],
       });
     expect(res.statusCode).toBe(201);
@@ -22,7 +34,7 @@ describe("Auth API", () => {
       .send({
         email: "login@example.com",
         password: "password123",
-        location: { lat: 40.7128, lng: -74.006 },
+        location: "New York, NY",
         preferences: ["sports"],
       });
     const res = await request(app)
@@ -33,10 +45,18 @@ describe("Auth API", () => {
   });
 
   it("should fail login with wrong password", async () => {
+    await request(app)
+      .post("/auth/register")
+      .send({
+        email: "login@example.com",
+        password: "password123",
+        location: "New York, NY",
+        preferences: ["sports"],
+      });
     const res = await request(app)
       .post("/auth/login")
       .send({ email: "login@example.com", password: "wrongpass" });
     expect(res.statusCode).toBe(401);
-    expect(res.body.message).toBe("Invalid email or password");
+    expect(res.body).toHaveProperty("error", "Invalid credentials");
   });
 });

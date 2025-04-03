@@ -4,18 +4,14 @@ const NodeGeocoder = require("node-geocoder");
 const { Op } = require("sequelize");
 
 const geocoder = NodeGeocoder({
-  provider: "openstreetmap", // Explicitly use OpenStreetMap
+  provider: "openstreetmap",
 });
 
-// controllers/eventController.js (partial)
-// controllers/eventController.js (partial)
 const createEvent = async (req, res) => {
   const { title, description, location, date_time, preferences } = req.body;
   try {
     if (!req.user || !req.user.id) {
-      return res
-        .status(401)
-        .json({ message: "Unauthorized: User not authenticated" });
+      return res.status(401).json({ message: req.t("unauthorized") });
     }
 
     let geo;
@@ -24,6 +20,7 @@ const createEvent = async (req, res) => {
       geo = await geocoder.geocode(location);
       console.log("Raw geocoding result:", JSON.stringify(geo, null, 2));
     } catch (geoError) {
+      console.error("Geocoding error:", geoError.message);
       throw new Error(`Geocoding failed: ${geoError.message}`);
     }
 
@@ -66,29 +63,39 @@ const createEvent = async (req, res) => {
       publishResult
     );
 
-    res.status(201).json({ id: event.id, title: event.title });
+    res.status(201).json({
+      message: req.t("event_created"), // Translated success message
+      id: event.id,
+      title: event.title,
+    });
   } catch (err) {
     console.error("Event creation error:", err.message);
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ message: req.t("server_error") }); // Translated error
   }
 };
 
 const getAllEvents = async (req, res) => {
-  const events = await Event.findAll();
-  res.status(200).json(events);
+  try {
+    const events = await Event.findAll();
+    res.status(200).json({
+      message: req.t("events_retrieved"), // Translated success message
+      events,
+    });
+  } catch (err) {
+    console.error("Get all events error:", err.message);
+    res.status(500).json({ message: req.t("server_error") });
+  }
 };
 
 const searchEvents = async (req, res) => {
   const { preferences, lat, lng, radius } = req.query;
 
   try {
-    // Parse query parameters
     const prefArray = preferences ? preferences.split(",") : null;
     const latitude = lat ? parseFloat(lat) : null;
     const longitude = lng ? parseFloat(lng) : null;
     const searchRadius = radius ? parseFloat(radius) * 1000 : 5000; // Convert km to meters, default 5km
 
-    // Build the query conditions
     const where = {};
     if (prefArray) {
       where.preferences = { [Op.overlap]: prefArray };
@@ -96,7 +103,6 @@ const searchEvents = async (req, res) => {
 
     let events;
     if (latitude && longitude) {
-      // Use raw SQL with PostGIS for proximity search
       const query = `
         SELECT *
         FROM "Events"
@@ -116,74 +122,75 @@ const searchEvents = async (req, res) => {
       const [results] = await Event.sequelize.query(query);
       events = results;
     } else {
-      // If no lat/lng, just filter by preferences
       events = await Event.findAll({ where });
     }
 
-    // Format response
     const formattedEvents = events.map((event) => ({
       id: event.id,
       title: event.title,
       location: {
-        lat: event.location.coordinates[1], // Extract from geometry
+        lat: event.location.coordinates[1],
         lng: event.location.coordinates[0],
       },
       date_time: event.date_time,
     }));
 
-    res.status(200).json(formattedEvents);
+    res.status(200).json({
+      message: req.t("events_retrieved"), // Translated success message
+      events: formattedEvents,
+    });
   } catch (err) {
     console.error("Search events error:", err.message);
-    res
-      .status(500)
-      .json({ message: "Failed to search events", error: err.message });
+    res.status(500).json({ message: req.t("server_error") });
   }
 };
+
 const getEventById = async (req, res) => {
-  const event = await Event.findByPk(req.params.id);
-  if (event) res.status(200).json(event);
-  else res.status(404).json({ error: "Event not found" });
+  try {
+    const event = await Event.findByPk(req.params.id);
+    if (!event) {
+      return res.status(404).json({ message: req.t("event_not_found") });
+    }
+    res.status(200).json({
+      message: req.t("event_retrieved"), // Translated success message
+      event,
+    });
+  } catch (err) {
+    console.error("Get event by ID error:", err.message);
+    res.status(500).json({ message: req.t("server_error") });
+  }
 };
+
 const updateEvent = async (req, res) => {
   const { id } = req.params;
   const { title, description, location, date_time, preferences } = req.body;
 
   try {
-    // Check if user is authenticated
     if (!req.user || !req.user.id) {
-      return res
-        .status(401)
-        .json({ error: "Unauthorized: User not authenticated" });
+      return res.status(401).json({ message: req.t("unauthorized") });
     }
 
-    // Find the event
     const event = await Event.findByPk(id);
     if (!event) {
-      return res.status(404).json({ error: "Event not found" });
+      return res.status(404).json({ message: req.t("event_not_found") });
     }
 
-    // Check if user is the creator
     if (event.creator_id !== req.user.id) {
-      return res.status(401).json({
-        error: "Unauthorized: Only the creator can update this event",
-      });
+      return res.status(401).json({ message: req.t("unauthorized_creator") });
     }
 
-    // Geocode the new location if provided
     let coords = event.location;
     if (location) {
       const geo = await geocoder.geocode(location);
       if (!geo || !geo.length) {
-        return res.status(400).json({ error: "Invalid location" });
+        return res.status(400).json({ message: req.t("invalid_location") });
       }
       coords = {
         type: "Point",
         coordinates: [geo[0].longitude, geo[0].latitude],
-        formattedAddress: geo[0].formattedAddress,
       };
     }
 
-    // Update the event
     await event.update({
       title: title || event.title,
       description: description || event.description,
@@ -194,7 +201,6 @@ const updateEvent = async (req, res) => {
       preferences: preferences || event.preferences,
     });
 
-    // Publish updated event to Redis (optional, if you want notifications)
     const message = JSON.stringify({
       title: event.title,
       description: event.description,
@@ -205,96 +211,96 @@ const updateEvent = async (req, res) => {
     await redisPublisher.publish("event_notifications", message);
     console.log("Published updated event to Redis:", message);
 
-    res.status(200).json({ id: event.id, title: event.title });
+    res.status(200).json({
+      message: req.t("event_updated"), // Translated success message
+      id: event.id,
+      title: event.title,
+    });
   } catch (err) {
     console.error("Update event error:", err.message);
-    res
-      .status(500)
-      .json({ error: "Failed to update event", details: err.message });
+    res.status(500).json({ message: req.t("server_error") });
   }
 };
 
 const deleteEvent = async (req, res) => {
-  const event = await Event.findByPk(req.params.id);
-  if (!event || event.userId !== req.user.id) {
-    return res.status(404).json({ error: "Event not found or unauthorized" });
+  try {
+    const event = await Event.findByPk(req.params.id);
+    if (!event) {
+      return res.status(404).json({ message: req.t("event_not_found") });
+    }
+    if (event.creator_id !== req.user.id) {
+      return res.status(401).json({ message: req.t("unauthorized_creator") });
+    }
+    await event.destroy();
+    res.status(200).json({ message: req.t("event_deleted") }); // 200 with message instead of 204
+  } catch (err) {
+    console.error("Delete event error:", err.message);
+    res.status(500).json({ message: req.t("server_error") });
   }
-  await event.destroy();
-  res.status(204).send();
 };
+
 const rateEvent = async (req, res) => {
-  const { id } = req.params; // Event ID from URL
-  const { rating } = req.body; // Rating from request body
+  const { id } = req.params;
+  const { rating } = req.body;
 
   try {
-    // Check if user is authenticated
     if (!req.user || !req.user.id) {
-      return res
-        .status(401)
-        .json({ error: "Unauthorized: User not authenticated" });
+      return res.status(401).json({ message: req.t("unauthorized") });
     }
 
-    // Validate rating
     if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
-      return res
-        .status(400)
-        .json({ error: "Rating must be an integer between 1 and 5" });
+      return res.status(400).json({ message: req.t("invalid_rating") });
     }
 
-    // Check if event exists
     const event = await Event.findByPk(id);
     if (!event) {
-      return res.status(404).json({ error: "Event not found" });
+      return res.status(404).json({ message: req.t("event_not_found") });
     }
 
-    // Create or update the rating
     const [ratingRecord, created] = await Rating.findOrCreate({
       where: {
         event_id: id,
         user_id: req.user.id,
       },
       defaults: {
-        rating: rating,
+        rating,
       },
     });
 
     if (!created) {
-      // If rating exists, update it
       await ratingRecord.update({ rating });
     }
 
-    res.status(201).json({ eventId: parseInt(id), rating });
+    res.status(201).json({
+      message: req.t("event_rated"), // Translated success message
+      eventId: parseInt(id),
+      rating,
+    });
   } catch (err) {
     console.error("Rate event error:", err.message);
     if (
       err.name === "SequelizeValidationError" ||
       err.name === "SequelizeDatabaseError"
     ) {
-      return res.status(400).json({ error: err.message });
+      return res.status(400).json({ message: req.t("bad_request") });
     }
-    res
-      .status(500)
-      .json({ error: "Failed to rate event", details: err.message });
+    res.status(500).json({ message: req.t("server_error") });
   }
 };
+
 const favoriteEvent = async (req, res) => {
-  const { id } = req.params; // Event ID from URL
+  const { id } = req.params;
 
   try {
-    // Check if user is authenticated
     if (!req.user || !req.user.id) {
-      return res
-        .status(401)
-        .json({ error: "Unauthorized: User not authenticated" });
+      return res.status(401).json({ message: req.t("unauthorized") });
     }
 
-    // Check if event exists
     const event = await Event.findByPk(id);
     if (!event) {
-      return res.status(404).json({ error: "Event not found" });
+      return res.status(404).json({ message: req.t("event_not_found") });
     }
 
-    // Create or find the favorite (prevent duplicates)
     const [favorite, created] = await Favorite.findOrCreate({
       where: {
         user_id: req.user.id,
@@ -304,33 +310,33 @@ const favoriteEvent = async (req, res) => {
 
     if (!created) {
       return res.status(200).json({
+        message: req.t("event_already_favorited"),
         eventId: parseInt(id),
         userId: req.user.id,
-        message: "Event already favorited",
       });
     }
 
-    res.status(201).json({ eventId: parseInt(id), userId: req.user.id });
+    res.status(201).json({
+      message: req.t("event_favorited"), // Translated success message
+      eventId: parseInt(id),
+      userId: req.user.id,
+    });
   } catch (err) {
     console.error("Favorite event error:", err.message);
     if (
       err.name === "SequelizeValidationError" ||
       err.name === "SequelizeDatabaseError"
     ) {
-      return res.status(400).json({ error: err.message });
+      return res.status(400).json({ message: req.t("bad_request") });
     }
-    res
-      .status(500)
-      .json({ error: "Failed to favorite event", details: err.message });
+    res.status(500).json({ message: req.t("server_error") });
   }
 };
 
 const getFavorites = async (req, res) => {
   try {
     if (!req.user || !req.user.id) {
-      return res
-        .status(401)
-        .json({ error: "Unauthorized: User not authenticated" });
+      return res.status(401).json({ message: req.t("unauthorized") });
     }
 
     const favorites = await Favorite.findAll({
@@ -362,14 +368,16 @@ const getFavorites = async (req, res) => {
       preferences: fav.Event.preferences,
     }));
 
-    res.status(200).json(formattedFavorites);
+    res.status(200).json({
+      message: req.t("favorites_retrieved"), // Translated success message
+      favorites: formattedFavorites,
+    });
   } catch (err) {
     console.error("List favorite events error:", err.message);
-    res
-      .status(500)
-      .json({ error: "Failed to list favorite events", details: err.message });
+    res.status(500).json({ message: req.t("server_error") });
   }
 };
+
 module.exports = {
   createEvent,
   getAllEvents,

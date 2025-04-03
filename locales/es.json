@@ -1,11 +1,20 @@
 {
-  "welcome": "Bienvenido al Localizador de Eventos",
+  "register_success": "Ciudadano recibido con éxito",
+  "login_success": "Llave otorgada con éxito",
+  "bad_request": "Solicitud incorrecta",
+  "unauthorized": "No autorizado",
+  "server_error": "Error interno del servidor",
   "event_created": "Evento creado con éxito",
+  "events_retrieved": "Eventos recuperados con éxito",
+  "event_retrieved": "Evento recuperado con éxito",
   "event_updated": "Evento actualizado con éxito",
   "event_deleted": "Evento eliminado con éxito",
-  "not_found": "Evento no encontrado",
-  "unauthorized": "No autorizado",
-  "rated": "Evento calificado con éxito",
-  "favorited": "Evento añadido a favoritos",
-  "invalid_credentials": "Correo o contraseña inválidos"
+  "event_not_found": "Evento no encontrado",
+  "invalid_location": "Ubicación inválida",
+  "unauthorized_creator": "No autorizado: Solo el creador puede modificar este evento",
+  "invalid_rating": "La calificación debe ser un entero entre 1 y 5",
+  "event_rated": "Evento calificado con éxito",
+  "event_favorited": "Evento marcado como favorito con éxito",
+  "event_already_favorited": "El evento ya está en favoritos",
+  "favorites_retrieved": "Eventos favoritos recuperados con éxito"
 }

@@ -1,5 +1,6 @@
 const { User } = require("../models");
 const jwt = require("jsonwebtoken");
+const bcrypt = require("bcrypt");
 const NodeGeocoder = require("node-geocoder");
 
 const geocoder = NodeGeocoder({
@@ -30,24 +31,31 @@ const register = async (req, res) => {
     };
     console.log("Using coordinates:", coords);
 
+    // Hash the password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
     console.log("Creating user with:", {
       email,
-      password,
+      password: hashedPassword,
       location: coords,
       preferences,
     });
     const user = await User.create({
       email,
-      password,
+      password: hashedPassword, // Store hashed password
       location: coords,
       preferences,
     });
     console.log("User created:", { id: user.id, email: user.email });
 
-    res.status(201).json({ id: user.id, email: user.email });
+    res.status(201).json({
+      message: req.t("register_success"), // Translated success message
+      id: user.id,
+      email: user.email,
+    });
   } catch (err) {
     console.error("Registration error:", err.message);
-    res.status(400).json({ error: err.message });
+    res.status(400).json({ message: req.t("bad_request") }); // Translated error
   }
 };
 
@@ -55,13 +63,27 @@ const login = async (req, res) => {
   const { email, password } = req.body;
   try {
     const user = await User.findOne({ where: { email } });
-    if (!user || user.password !== password) {
-      return res.status(401).json({ error: "Invalid credentials" });
+    if (!user) {
+      console.log("User not found for email:", email);
+      return res.status(401).json({ message: req.t("unauthorized") });
     }
-    const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET);
-    res.status(200).json({ token });
+
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
+      console.log("Password mismatch for email:", email);
+      return res.status(401).json({ message: req.t("unauthorized") });
+    }
+
+    const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, {
+      expiresIn: "1h", // Add expiration for security
+    });
+    res.status(200).json({
+      message: req.t("login_success"), // Translated success message
+      token,
+    });
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    console.error("Login error:", err.message);
+    res.status(400).json({ message: req.t("bad_request") }); // Translated error
   }
 };
 

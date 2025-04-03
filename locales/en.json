@@ -1,11 +1,20 @@
 {
-  "welcome": "Welcome to the Event Locator",
+  "register_success": "Citizen welcomed successfully",
+  "login_success": "Key granted successfully",
+  "bad_request": "Bad request",
+  "unauthorized": "Unauthorized",
+  "server_error": "Internal server error",
   "event_created": "Event created successfully",
+  "events_retrieved": "Events retrieved successfully",
+  "event_retrieved": "Event retrieved successfully",
   "event_updated": "Event updated successfully",
   "event_deleted": "Event deleted successfully",
-  "not_found": "Event not found",
-  "unauthorized": "Unauthorized",
-  "rated": "Event rated successfully",
-  "favorited": "Event added to favorites",
-  "invalid_credentials": "Invalid email or password"
+  "event_not_found": "Event not found",
+  "invalid_location": "Invalid location",
+  "unauthorized_creator": "Unauthorized: Only the creator can modify this event",
+  "invalid_rating": "Rating must be an integer between 1 and 5",
+  "event_rated": "Event rated successfully",
+  "event_favorited": "Event favorited successfully",
+  "event_already_favorited": "Event already favorited",
+  "favorites_retrieved": "Favorite events retrieved successfully"
 }

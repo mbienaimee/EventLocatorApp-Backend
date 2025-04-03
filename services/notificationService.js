@@ -1,10 +1,8 @@
-// services/notificationService.js
 const { redisSubscriber } = require("../config/redis");
 const { User } = require("../models");
 const { Op } = require("sequelize");
 const nodemailer = require("nodemailer");
 
-// Email transport configuration
 const transporter = nodemailer.createTransport({
   host: "smtp.gmail.com",
   port: 587,
@@ -14,7 +12,7 @@ const transporter = nodemailer.createTransport({
     pass: "gztl afyt qico geqp",
   },
   tls: {
-    rejectUnauthorized: false, // Temporarily bypass SSL check
+    rejectUnauthorized: false,
   },
 });
 
@@ -86,7 +84,6 @@ redisSubscriber.on("message", async (channel, message) => {
       return;
     }
 
-    // Format date and time in a human-readable way
     const formattedDateTime = eventDateTime.toLocaleString("en-US", {
       weekday: "long",
       year: "numeric",
@@ -97,26 +94,24 @@ redisSubscriber.on("message", async (channel, message) => {
       timeZoneName: "short",
     });
 
-    // Use the original location string if available, or coordinates as fallback
     const locationString =
       event.location.formattedAddress ||
       `${event.location.coordinates[0]}, ${event.location.coordinates[1]}`;
 
-    // Send email to each nearby user
     await Promise.all(
       nearbyUsers.map((user) => {
         const subject = `Event Alert: ${event.title}`;
         const text = `Hello ${
           user.email.split("@")[0]
-        },\n\nThe Town Crier brings you news of an exciting event!\n\nEvent: ${
+        },\n\nThe Event locator brings you news of an exciting event!\n\nEvent: ${
           event.title
         }\nDescription: ${
           event.description
         }\nLocation: ${locationString}\nWhen: ${formattedDateTime}\n\nEnjoy the event!\n\nBest regards,\nThe Event Locator Team`;
         const html = `
-          <h2>Town Crier Event Alert</h2>
+          <h2>Event locator Alert</h2>
           <p>Hello ${user.email.split("@")[0]},</p>
-          <p>The Town Crier brings you news of an exciting event!</p>
+          <p>The Event locator brings you news of an exciting event!</p>
           <ul>
             <li><strong>Event:</strong> ${event.title}</li>
             <li><strong>Description:</strong> ${event.description}</li>

@@ -1,16 +1,13 @@
-// models/index.js
 const { Sequelize, DataTypes } = require("sequelize");
 const sequelize = new Sequelize(process.env.DATABASE_URL, {
   dialect: "postgres",
 });
 
-// Initialize models
 const UserModel = require("./user")(sequelize, DataTypes);
 const EventModel = require("./event")(sequelize, DataTypes);
 const RatingModel = require("./rating")(sequelize, DataTypes);
 const FavoriteModel = require("./favorite")(sequelize, DataTypes);
 
-// Define relationships
 UserModel.hasMany(EventModel, {
   foreignKey: "creator_id",
   onDelete: "CASCADE",
