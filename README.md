@@ -186,24 +186,4 @@ Create a `tests/` folder and add test files (e.g., `auth.test.js`). Run tests:
 npm test
 ```
 
-Example test:
-
-```javascript
-const request = require("supertest");
-const app = require("../app");
-
-describe("Auth API", () => {
-  it("should register a user", async () => {
-    const res = await request(app)
-      .post("/auth/register?lang=en")
-      .send({
-        email: "test@example.com",
-        password: "Test123!",
-        location: "Kigali, Rwanda",
-        preferences: ["music"],
-      });
-    expect(res.statusCode).toBe(201);
-    expect(res.body.message).toBe("Citizen welcomed successfully");
-  });
-});
-```
+[youtube vide](https://www.youtube.com/watch?v=4K1mCAFlcgU)

@@ -73,7 +73,7 @@ app.use(
 (async () => {
   try {
     await sequelize.query("CREATE EXTENSION IF NOT EXISTS postgis;");
-    await sequelize.sync({ force: true });
+    await sequelize.sync({ force: false });
     console.log("Database synced successfully");
   } catch (err) {
     console.error("Database sync failed:", err.message);
